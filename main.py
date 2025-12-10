@@ -1,4 +1,4 @@
- # main.py (Reaction Bot - FINAL FIX)
+# main.py (Reaction Bot - FINAL FIX)
 import logging
 import os
 import sys
@@ -65,6 +65,11 @@ def handle_update(update_data):
             
             response_text = reaction_responses.get(first_reaction)
             
+            # FIX: Agar defined reactions mein nahi mila, to default response dein aur log karein.
+            if response_text is None:
+                response_text = f"Received reaction: {first_reaction}. (Reacting to ensure connection is live)"
+                logger.info(f"Unhandled reaction received: {first_reaction}") 
+
             if response_text:
                 run_sync(BOT.send_message(
                     chat_id, 
