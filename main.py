@@ -1,10 +1,50 @@
-# ⚠️ CORE REACTION BOT LOGIC
-        # ... (reaction_update, chat_id, message_id, new_reactions variable loading yahi rahega)
+ # main.py (Reaction Bot - FINAL FIX)
+import logging
+import os
+import sys
+import asyncio 
+from telegram import Bot
+from flask import Flask, request, jsonify 
+from typing import Final
 
+# Logging setup
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# --- SECURE TOKEN LOADING ---
+BOT_TOKEN: Final = os.environ.get("BOT_TOKEN") 
+if not BOT_TOKEN:
+    logger.error("❌ FATAL: BOT_TOKEN environment variable not set!")
+    sys.exit(1)
+    
+BOT = Bot(token=BOT_TOKEN)
+# ---------------------
+
+# --- ASYNC HELPER ---
+def run_sync(coroutine):
+    """Safely runs an async coroutine synchronously for Webhook."""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coroutine)
+# --------------------
+
+def handle_update(update_data):
+    """Processes a single Telegram Update dictionary (Raw JSON)."""
+    
+    # ⚠️ CORE REACTION BOT LOGIC START
+    if 'message_reaction' in update_data:
+        reaction_update = update_data['message_reaction']
+        chat_id = reaction_update['chat']['id']
+        message_id = reaction_update['message_id']
+        
+        new_reactions = [r['emoji'] for r in reaction_update.get('new_reaction', [])]
+        
         if new_reactions:
-            # Hum naye reactions mein se pehle emoji par focus karenge
             first_reaction = new_reactions[0]
-            response_text = None
             
             # --- Reaction Dictionary ---
             reaction_responses = {
@@ -33,4 +73,30 @@
                     parse_mode='Markdown'
                 ))
         return
-        # ⚠️ REACTION BOT LOGIC ENDS HERE
+    # ⚠️ CORE REACTION BOT LOGIC ENDS
+    
+    # Simple /start handler for testing
+    message_data = update_data.get('message', {})
+    text = message_data.get('text', '').strip()
+    chat_id = message_data.get('chat', {}).get('id')
+    
+    if text == "/start" and chat_id:
+        run_sync(BOT.send_message(chat_id, "Hello! I am the Reaction Bot. React to any message to see me respond."))
+        return
+
+
+# --- FLASK APPLICATION SETUP ---
+
+def create_app():
+    """Initializes the Flask app for Gunicorn/Webhook."""
+    app = Flask(__name__)
+
+    @app.route('/telegram', methods=['POST'])
+    def webhook():
+        if request.method == "POST":
+            update_data = request.get_json()
+            handle_update(update_data) 
+
+        return jsonify({'status': 'ok'}), 200 
+
+    return app
