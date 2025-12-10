@@ -1,4 +1,4 @@
-# main.py (Reaction Bot - FINAL FIX)
+# main.py (Reaction Bot - FINAL FIX and Updated Start Message)
 import logging
 import os
 import sys
@@ -80,13 +80,21 @@ def handle_update(update_data):
         return
     # ⚠️ CORE REACTION BOT LOGIC ENDS
     
-    # Simple /start handler for testing
+    # Simple /start handler (UPDATED MESSAGE)
     message_data = update_data.get('message', {})
     text = message_data.get('text', '').strip()
     chat_id = message_data.get('chat', {}).get('id')
     
     if text == "/start" and chat_id:
-        run_sync(BOT.send_message(chat_id, "Hello! I am the Reaction Bot. React to any message to see me respond."))
+        
+        # ⚠️ UPDATED START MESSAGE
+        start_message = (
+            "🚀 **I'm ready for reactions!**\n\n"
+            "Please use any of these emojis on a message to see me respond:\n"
+            "💋 👻 👀 🤯 💊 🙉 🕊️ 😻 👍 🆒 💗 🔥"
+        )
+        
+        run_sync(BOT.send_message(chat_id, start_message, parse_mode='Markdown'))
         return
 
 
