@@ -1,4 +1,4 @@
-# main.py (Reaction Bot - FINAL FIX and Updated Start Message)
+# main.py (Reaction Bot - FINAL CODE)
 import logging
 import os
 import sys
@@ -35,7 +35,7 @@ def run_sync(coroutine):
 def handle_update(update_data):
     """Processes a single Telegram Update dictionary (Raw JSON)."""
     
-    # ⚠️ CORE REACTION BOT LOGIC START
+    # ⚠️ 1. MESSAGE REACTION HANDLING
     if 'message_reaction' in update_data:
         reaction_update = update_data['message_reaction']
         chat_id = reaction_update['chat']['id']
@@ -65,11 +65,6 @@ def handle_update(update_data):
             
             response_text = reaction_responses.get(first_reaction)
             
-            # FIX: Agar defined reactions mein nahi mila, to default response dein aur log karein.
-            if response_text is None:
-                response_text = f"Received reaction: {first_reaction}. (Reacting to ensure connection is live)"
-                logger.info(f"Unhandled reaction received: {first_reaction}") 
-
             if response_text:
                 run_sync(BOT.send_message(
                     chat_id, 
@@ -77,20 +72,46 @@ def handle_update(update_data):
                     reply_to_message_id=message_id,
                     parse_mode='Markdown'
                 ))
-        return
-    # ⚠️ CORE REACTION BOT LOGIC ENDS
+        return # Reaction handled, exit here
+
     
-    # Simple /start handler (UPDATED MESSAGE)
+    # ⚠️ 2. ALL MESSAGE TYPES HANDLING (Text, Photo, File, Video)
+    
     message_data = update_data.get('message', {})
-    text = message_data.get('text', '').strip()
     chat_id = message_data.get('chat', {}).get('id')
     
-    if text == "/start" and chat_id:
+    if not chat_id:
+        return
+
+    text = message_data.get('text', '').strip()
+    reply_to_message_id = message_data.get('message_id')
+
+    response_text = None
+    
+    if message_data.get('photo'):
+        response_text = "🖼️ I received a photo! Looking good."
+    elif message_data.get('document'):
+        response_text = "📄 File received! What's inside?"
+    elif message_data.get('video'):
+        response_text = "📹 Video received! Hope it's interesting."
+    elif text and not text.startswith('/'):
+        # Saada text (non-command)
+        response_text = "💬 Got your message! Thanks for chatting."
+    
+    # Send response for any handled message type
+    if response_text:
+        run_sync(BOT.send_message(
+            chat_id, 
+            response_text, 
+            reply_to_message_id=reply_to_message_id
+        ))
+        return
         
-        # ⚠️ UPDATED START MESSAGE
+    # ⚠️ 3. START COMMAND HANDLING (If nothing else was handled)
+    if text == "/start" and chat_id:
         start_message = (
-            "🚀 **I'm ready for reactions!**\n\n"
-            "Please use any of these emojis on a message to see me respond:\n"
+            "🚀 **I'm ready for reactions and chat!**\n\n"
+            "I will reply to any message (photo, video, file, or text) and also react to these emojis:\n"
             "💋 👻 👀 🤯 💊 🙉 🕊️ 😻 👍 🆒 💗 🔥"
         )
         
