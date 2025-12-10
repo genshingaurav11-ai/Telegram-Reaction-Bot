@@ -1,4 +1,4 @@
-# main.py (Reaction Bot - FINAL CODE)
+# main.py (Reaction Bot - FINAL ROBUST CODE)
 import logging
 import os
 import sys
@@ -35,16 +35,20 @@ def run_sync(coroutine):
 def handle_update(update_data):
     """Processes a single Telegram Update dictionary (Raw JSON)."""
     
-    # ⚠️ 1. MESSAGE REACTION HANDLING
+    # ⚠️ 1. MESSAGE REACTION HANDLING (ROBUST FIX)
     if 'message_reaction' in update_data:
         reaction_update = update_data['message_reaction']
         chat_id = reaction_update['chat']['id']
         message_id = reaction_update['message_id']
         
-        new_reactions = [r['emoji'] for r in reaction_update.get('new_reaction', [])]
+        # New reactions को सुरक्षित रूप से पढ़ें
+        new_reactions_list = reaction_update.get('new_reaction', [])
         
-        if new_reactions:
-            first_reaction = new_reactions[0]
+        # इमोजी को सुरक्षित रूप से निकालें (केवल इमोजी टाइप)
+        emojis = [r.get('emoji') for r in new_reactions_list if r.get('type') == 'emoji' and r.get('emoji')]
+
+        if emojis:
+            first_reaction = emojis[0]
             
             # --- Reaction Dictionary ---
             reaction_responses = {
@@ -65,6 +69,11 @@ def handle_update(update_data):
             
             response_text = reaction_responses.get(first_reaction)
             
+            if response_text is None:
+                # Default response (यदि इमोजी लिस्ट में नहीं है)
+                response_text = f"Received reaction: {first_reaction}. (Reacting to ensure connection is live)"
+                logger.info(f"Unhandled reaction received: {first_reaction}") 
+
             if response_text:
                 run_sync(BOT.send_message(
                     chat_id, 
